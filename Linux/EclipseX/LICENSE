@@ -1,0 +1,31 @@
+Mozilla Public License Version 2.0
+==================================
+
+Copyright (c) 2025, Nikita Sergeevich
+
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at 
+https://www.mozilla.org/MPL/2.0/.
+
+---
+
+### Additional Terms:
+
+1. **Attribution Requirement**
+   - Any redistribution, modification, or derivative work of this software **must** include a clear and visible credit to the original author: **<ваше имя или название проекта>**.
+   - The credit must be placed in:
+     - The source code (e.g., in the header of main source files).
+     - Any documentation or release notes distributed with the software.
+     - Any user interface, if applicable.
+   - The credit must include:
+     - The original author's name or project name.
+     - A link to the original repository (if applicable).
+
+2. **Disclaimer and Acceptable Use**
+   - This software **is provided "as is," without any warranty** of any kind. The author is **not responsible** for any damages, direct or indirect, caused by the use or misuse of this software.
+   - The author **does not endorse** or support using this software for illegal, unethical, or malicious purposes, including but not limited to:
+     - The creation or distribution of malware.
+     - Exploiting security vulnerabilities.
+     - Engaging in illegal activities.
+
+By using this software, you acknowledge these terms.
