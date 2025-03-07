@@ -10,6 +10,7 @@
 #include <linux/delay.h>		// msleep
 
 #include <net/inet_sock.h>				// struct inet_sock
+#include <linux/inet.h>						// in4_pton()
 #include <uapi/linux/uio.h>				// struct iovec
 #include <uapi/linux/netlink.h>			// struct nlmsghdr
 #include <uapi/linux/inet_diag.h>		// struct inet_diag_msg

