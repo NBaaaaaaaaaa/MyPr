@@ -158,11 +158,6 @@ enum IP_type {
     ipv6
 };
 
-struct Extended_array {
-    void* array_addr;
-    int array_size;
-};
-
 /*
     !Подумать на типом хранения строк с ip
 */
@@ -177,10 +172,10 @@ struct Extended_array addrs[] = {
     {udp6_addrs, sizeof(udp6_addrs) / sizeof(udp6_addrs[0])}
 };
 
-int tcp4_ports[] = {22};
-int udp4_ports[] = {67};
-int tcp6_ports[] = {222};
-int udp6_ports[] = {1235};
+unsigned int tcp4_ports[] = {22};
+unsigned int udp4_ports[] = {67};
+unsigned int tcp6_ports[] = {222};
+unsigned int udp6_ports[] = {1235};
 struct Extended_array ports[] = {
     {tcp4_ports, sizeof(tcp4_ports) / sizeof(tcp4_ports[0])}, 
     {udp4_ports, sizeof(udp4_ports) / sizeof(udp4_ports[0])},
@@ -266,8 +261,8 @@ bool is_hide_port(__be16 sport, __be16 dport, enum Protocols protocol, enum IP_t
 
     // 2 * ip_type - если ipv4, то 0. Иначе нужноее смщенеие 2
     for (int port_id = 0; port_id < ports[protocol + 2 * ip_type].array_size; port_id++) {
-        if (sport == htons(((int *)ports[protocol + 2 * ip_type].array_addr)[port_id]) || 
-            dport == htons(((int *)ports[protocol + 2 * ip_type].array_addr)[port_id])) {
+        if (sport == htons(((unsigned int *)ports[protocol + 2 * ip_type].array_addr)[port_id]) || 
+            dport == htons(((unsigned int *)ports[protocol + 2 * ip_type].array_addr)[port_id])) {
             return true;
         }    
     }
