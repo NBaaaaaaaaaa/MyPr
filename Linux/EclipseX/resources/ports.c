@@ -16,7 +16,11 @@ extern int debug_lvl;
 // struct user_msghdr __user *msg,
 // unsigned int flags
 
-// надо подумать. пока падает
+// надо подумать. ошибка. вроде в этой функции
+// [56902.858669] BUG: unable to handle page fault for address: ffffffffc0cec186
+// [56902.858727] #PF: supervisor instruction fetch in kernel mode
+// [56902.858731] #PF: error_code(0x0010) - not-present page
+
 // static asmlinkage long ex_sys_recvmsg(struct pt_regs *regs) {
 //     long ret = real_sys_recvmsg(regs);
 
