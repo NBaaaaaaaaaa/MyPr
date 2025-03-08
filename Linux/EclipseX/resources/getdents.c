@@ -3,6 +3,8 @@
     
     Сделано только getdents64
     Надо сделать getdents
+
+    падает, если автозапл названия ультилиты (TAB)
 */
 
 static asmlinkage long ex_sys_getdents64(struct pt_regs *regs)
